@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const firebase = require('firebase');
 const Day = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+// let countDay = 0;
 const MicroGear = require('microgear');
 const microgear = MicroGear.create({
 	key: 'hT1Rb59vBTW4Crf',
@@ -46,14 +47,13 @@ app.use(bodyParser.json());
 microgear.on('connected', function () {
 	console.log('connected');
 });
-microgear.on('message', (topic, msg) => {
+microgear.on('message', async(topic, msg) => {
 	const data = msg.toString('utf8');
 	console.log(topic, data);
-	let countDay
 	if (data.includes('Summary')) {
-		firebase.database().ref('/feeding').once('value',snapshot => {
-			countDay = snapshot.val().countDay
-		})
+		let countDay = 0;
+		const snapshot = await firebase.database().ref('/feeding').once('value')
+		countDay = snapshot.val().countDay
 		let string = data.split(' ');
 		string.splice(0, 1);
 		let summary = {};
@@ -67,37 +67,29 @@ microgear.on('message', (topic, msg) => {
 			feeding: summary.Food,
 			eating: summary.CatEat
 		}
+		console.log('earth')
 		countDay = (countDay + 1) % 7;
 		console.log(summaryFeed)
 		firebase.database().ref('feeding/summaryFeed').push(summaryFeed)
-		firebase.database().ref('feeding').update({
+		firebase.database().ref('/feeding').update({
 			currentFeed: 0,
-			countDay:countDay,
-			totalAmount:0
+			totalAmount:0,
+			countDay: countDay
 		})
 	}
 
 	if (data.includes('Feeding')) {
-		var feed = 0;
-		firebase
+		let feed = 0;
+		const snapshot = await firebase
 			.database()
 			.ref('feeding')
-			.once('value', snapshot => {
-				feed = snapshot.val().currentFeed;
-				firebase.database().ref('feeding/summaryFeed').once('value', snapshot2 => {
-					let summaryFeedData = toArray(snapshot2.val());
-					let currentSummary = summaryFeedData[summaryFeedData.length - 1];
-					let updateCurrentFeed = {};
-					updateCurrentFeed['feeding'] = currentSummary.feeding + snapshot.val().amountPerMeal;
-					firebase.database().ref(`feeding/summaryFeed/${currentSummary.id}`).update(updateCurrentFeed)
-				})
-			});
-
+			.once('value')
+		let data = snapshot.val()
 		var feedData = {
-			// isFeed:true,
-			currentFeed: feed + 1,
+			currentFeed: data.currentFeed + 1,
+			totalAmount: data.totalAmount + data.amountPerMeal
 		};
-		firebase
+		await firebase
 			.database()
 			.ref('/feeding')
 			.update(feedData);

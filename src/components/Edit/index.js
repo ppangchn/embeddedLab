@@ -32,14 +32,14 @@ class Edit extends Component {
 		this.setState({ maxFeed: e });
 	}
 	async toggleModalSave() {
+		this.setState({ toggleModalSave: !this.state.toggleModalSave });
+	}
+	async sendData() {
 		const { amountPerMeal, maxFeed } = this.state;
 		var data = {
 			amountPerMeal: +amountPerMeal,
 			maximumNumFeed: maxFeed.value,
-		};
-		console.log(data);
-		await database.ref('/feeding').update(data);
-		this.setState({ toggleModalSave: !this.state.toggleModalSave });
+		}
 		try {
 			await axios.post('http://localhost:5000/edit', data).then(res => {
 				console.log(res.data);
@@ -47,9 +47,10 @@ class Edit extends Component {
 		} catch (error) {
 			console.log(error);
 		}
+		await database.ref('/feeding').update(data);
 	}
 	componentDidMount() {
-		database.ref('/feeding').on('value', snapshot => {
+		database.ref('/feeding').once('value', snapshot => {
 			const data = snapshot.val();
 			this.setState({
 				amountPerMeal: data.amountPerMeal,
@@ -86,7 +87,12 @@ class Edit extends Component {
 				<Modal isOpen={toggleModalSave} toggle={toggleModalSave} centered>
 					<ModalBody>Save!</ModalBody>
 					<ModalFooter>
-						<Button color="primary" onClick={() => this.toggleModalSave()}>
+						<Button
+							color="primary"
+							onClick={() => {
+								this.toggleModalSave();this.sendData();
+							}}
+						>
 							OK
 						</Button>
 					</ModalFooter>

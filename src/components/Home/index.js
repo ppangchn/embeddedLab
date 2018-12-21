@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Container, Row, Col, Button } from 'reactstrap';
 import { database } from '../../firebase';
-import { AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Legend ,CartesianGrid} from 'recharts';
 import moment from 'moment';
 import axios from 'axios';
 import '../../css/Home.css';
@@ -54,12 +54,7 @@ class Home extends Component {
 					lastFeed: Date.now(),
 					totalAmount: totalAmount + amountPerMeal,
 				};
-				console.log({ feed, currentSummary, amountPerMeal });
-				// let updateCurrentFeed = {};
-				// updateCurrentFeed['feeding'] = currentSummary.feeding + amountPerMeal;
-				// console.log(updateCurrentFeed);
 				database.ref('/feeding').update(feed);
-				// database.ref(`/feeding/summaryFeed/${currentSummary.id}`).update(updateCurrentFeed);
 			}
 		});
 		await axios.get('http://localhost:5000/feeding').then(res => {
@@ -93,21 +88,19 @@ class Home extends Component {
 					feedButton: 'Maximum feeding for today!',
 					disabled: true,
 				});
-			database.ref('feeding/summaryFeed').on('value', snapshot => {
-				let summaryFeedData = toArray(snapshot.val());
-				summaryFeedData = summaryFeedData.slice(summaryFeedData.length - 7, summaryFeedData.length);
-				if (summaryFeedData) {
-					let currentTotalAmount = summaryFeedData[summaryFeedData.length - 1].feeding;
-					// database.ref('feeding/summary').update(currentFeed)
-					
-					this.setState({ lineChartData: summaryFeedData, totalAmount: currentTotalAmount });
-				}
-			});
 			this.setState({
 				currentFeed: data.currentFeed,
 				maxFeed: data.maximumNumFeed,
 				amountPerMeal: data.amountPerMeal,
+				totalAmount: data.totalAmount
 			});
+		});
+		database.ref('feeding/summaryFeed').on('value', snapshot => {
+			let summaryFeedData = toArray(snapshot.val());
+			summaryFeedData = summaryFeedData.slice(summaryFeedData.length - 7, summaryFeedData.length);
+			if (summaryFeedData) {
+				this.setState({ lineChartData: summaryFeedData });
+			}
 		});
 		setInterval(() => {
 			const update = {
@@ -154,9 +147,10 @@ class Home extends Component {
 				<Row>
 					<Col className="pd-top-3 pd-bottom-3">
 						<AreaChart width={1100} height={400} data={lineChartData}>
-							<Tooltip />
 							<XAxis dataKey="day" />
 							<YAxis dataKey="feeding" />
+							<Legend verticalAlign="top" height={36}/>
+							<CartesianGrid strokeDasharray="3 3" />
 							<Area type="monotone" dataKey="feeding" stroke="#FF7700" fill="#FF7700" fillOpacity={0.5} />
 							<Area type="monotone" dataKey="eating" stroke="#0066CC" fill="#0066CC" fillOpacity={0.5} />
 						</AreaChart>
